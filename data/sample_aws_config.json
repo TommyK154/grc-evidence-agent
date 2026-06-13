@@ -1,0 +1,38 @@
+{
+  "account_id": "123456789012",
+  "generated_at": "2026-06-01T00:00:00Z",
+  "iam_password_policy": {
+    "MinimumPasswordLength": 14,
+    "RequireSymbols": true,
+    "RequireNumbers": true,
+    "RequireUppercaseCharacters": true,
+    "RequireLowercaseCharacters": true,
+    "AllowUsersToChangePassword": true,
+    "ExpirePasswords": true,
+    "MaxPasswordAge": 90,
+    "PasswordReusePrevention": 24,
+    "HardExpiry": false
+  },
+  "cloudtrail": {
+    "TrailName": "org-management-trail",
+    "TrailARN": "arn:aws:cloudtrail:us-east-1:123456789012:trail/org-management-trail",
+    "HomeRegion": "us-east-1",
+    "IsLogging": true,
+    "IsMultiRegionTrail": true,
+    "IncludeGlobalServiceEvents": true,
+    "LogFileValidationEnabled": true,
+    "LatestDeliveryTime": "2026-05-31T23:58:11Z"
+  },
+  "s3_public_access_block": {
+    "scope": "account",
+    "BlockPublicAcls": true,
+    "IgnorePublicAcls": true,
+    "BlockPublicPolicy": true,
+    "RestrictPublicBuckets": true
+  },
+  "root_account": {
+    "RootUserMfaEnabled": true,
+    "RootUserAccessKeysPresent": false,
+    "RootUserLastUsed": "2026-01-15T09:42:00Z"
+  }
+}
