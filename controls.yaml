@@ -1,0 +1,104 @@
+# controls.yaml - GRC Evidence Agent (Artifact 1)
+# 10 SOC 2 common criteria controls, scoped to what the two v1 collectors
+# (GitHub API + mock AWS config) can plausibly evidence.
+# Evidence type vocabulary matches the collector output schema:
+#   github.*  -> collectors/github_collector.py
+#   aws.*     -> collectors/aws_mock_collector.py
+# CC7.3 is deliberately evidence-poor: the golden set should expect NO mapping
+# for it. Testing the agent's restraint is part of the eval design.
+ 
+controls:
+  - id: CC6.1
+    name: Logical access security
+    description: >
+      The entity implements logical access security software, infrastructure,
+      and architectures over protected information assets to restrict access
+      to authorized users.
+    expected_evidence:
+      - aws.iam_password_policy
+      - github.branch_protection
+ 
+  - id: CC6.2
+    name: User registration and authorization
+    description: >
+      Prior to issuing system credentials, the entity registers and authorizes
+      new internal and external users whose access is administered by the
+      entity.
+    expected_evidence:
+      - aws.iam_user_inventory
+ 
+  - id: CC6.3
+    name: Role-based access and least privilege
+    description: >
+      The entity authorizes, modifies, or removes access to data, software,
+      functions, and other protected information assets based on roles and
+      responsibilities, applying least privilege.
+    expected_evidence:
+      - aws.iam_least_privilege
+      - github.required_reviews
+ 
+  - id: CC6.6
+    name: Authentication for external access
+    description: >
+      The entity implements logical access security measures, including
+      multi-factor authentication, to protect against threats from sources
+      outside its system boundaries.
+    expected_evidence:
+      - aws.root_mfa
+      - github.two_factor_status
+ 
+  - id: CC6.7
+    name: Restriction of data transmission and movement
+    description: >
+      The entity restricts the transmission, movement, and removal of
+      information to authorized users and processes, protecting it during
+      transmission and storage.
+    expected_evidence:
+      - aws.s3_public_access_block
+ 
+  - id: CC6.8
+    name: Prevention and detection of unauthorized software
+    description: >
+      The entity implements controls to prevent or detect and act upon the
+      introduction of unauthorized or malicious software.
+    expected_evidence:
+      - github.dependabot_status
+ 
+  - id: CC7.1
+    name: Vulnerability detection and monitoring
+    description: >
+      The entity uses detection and monitoring procedures to identify changes
+      to configurations that introduce vulnerabilities, and susceptibilities
+      to newly discovered vulnerabilities.
+    expected_evidence:
+      - github.dependabot_alerts
+      - github.secret_scanning
+ 
+  - id: CC7.2
+    name: Monitoring for anomalous activity
+    description: >
+      The entity monitors system components and their operation for anomalies
+      indicative of malicious acts, natural disasters, and errors affecting
+      the entity's ability to meet its objectives.
+    expected_evidence:
+      - aws.cloudtrail_enabled
+ 
+  - id: CC7.3
+    name: Evaluation of security events
+    description: >
+      The entity evaluates security events to determine whether they could or
+      have resulted in a failure to meet its objectives, and takes action to
+      prevent or address such failures.
+    expected_evidence: []
+    # Intentionally uncoverable by v1 sources. Correct agent behavior is to
+    # propose no mapping, or low confidence at most. Golden set: no mapping.
+ 
+  - id: CC8.1
+    name: Change management
+    description: >
+      The entity authorizes, designs, develops, configures, documents, tests,
+      approves, and implements changes to infrastructure, data, software, and
+      procedures to meet its objectives.
+    expected_evidence:
+      - github.branch_protection
+      - github.required_reviews
