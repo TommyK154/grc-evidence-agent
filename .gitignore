@@ -5,3 +5,5 @@ __pycache__/
 *.pyc
 .vs/
 .envrc
+review_queue.json
+REVIEW.md
