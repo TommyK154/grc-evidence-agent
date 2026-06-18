@@ -1,0 +1,57 @@
+# evals/golden.yaml
+# Hand-labeled ground truth for the GRC evidence agent.
+# Authored by Tommy Kargul. The agent never sees this file.
+# expected_evidence lists the evidence IDs that satisfy each control,
+# per independent GRC judgment against the actual collected evidence.
+
+golden:
+  - control_id: CC6.1
+    expected_evidence:
+      - aws.iam_password_policy.123456789012
+      - github.branch_protection.main
+      - aws.root_mfa.123456789012
+    note: password policy and root MFA are strong logical-access controls; branch protection restricts who can change production code, weaker fit for such a broad control
+
+  - control_id: CC6.2
+    expected_evidence: []
+    note: no collected evidence addresses user registration/authorization; expected type aws.iam_user_inventory is not produced by the v1 collectors, so correct answer is no mapping
+
+  - control_id: CC6.3
+    expected_evidence: []
+    note: required_reviews with 0 mandated approvals does not enforce role-based access or least privilege (author can self-merge); no IAM least-privilege evidence collected; no mapping
+
+  - control_id: CC6.6
+    expected_evidence:
+      - aws.root_mfa.123456789012
+    note: root MFA satisfies MFA-for-external-access; github.two_factor_status rejected because the org endpoint returned not-an-org, a non-signal rather than evidence of 2FA
+
+  - control_id: CC6.7
+    expected_evidence:
+      - aws.s3_public_access_block.123456789012
+    note: account-level S3 public access block (all four settings on) prevents non-public data from being exposed publicly, a direct restriction on data movement
+
+  - control_id: CC6.8
+    expected_evidence:
+      - github.dependabot_status.grc-evidence-agent
+      - github.secret_scanning.grc-evidence-agent
+    note: Dependabot enabled detects introduction of malicious/vulnerable dependencies in the assessed scope; secret scanning is an indirect fit here (stronger home is CC7.1); dependabot_alerts 403 rejected as non-signal
+
+  - control_id: CC7.1
+    expected_evidence:
+      - github.dependabot_status.grc-evidence-agent
+      - github.secret_scanning.grc-evidence-agent
+    note: Dependabot enabled is a direct vulnerability-monitoring control (continuous dependency scanning); secret scanning detects committed-secret exposure, a real but narrower vuln class; dependabot_alerts 403 rejected as non-signal
+
+  - control_id: CC7.2
+    expected_evidence:
+      - aws.cloudtrail_enabled.123456789012
+    note: CloudTrail logging, multi-region, with log file validation provides account-wide tamper-evident monitoring of API activity
+
+  - control_id: CC7.3
+    expected_evidence: []
+    note: no collected evidence is an event-evaluation or response process; all ten items are configured features or states, not workflows, runbooks, or records of events being assessed and acted on; correct answer is no mapping
+
+  - control_id: CC8.1
+    expected_evidence:
+      - github.branch_protection.main
+    note: branch protection enforces a controlled path for changes to main; required_reviews rejected because 0 required approvals provides no independent verification, so the review gate does not meet the control's objective even though the mechanism is present
