@@ -7,3 +7,5 @@ __pycache__/
 .envrc
 review_queue.json
 REVIEW.md
+evidence_inventory.json
+evals/agent_mappings.json

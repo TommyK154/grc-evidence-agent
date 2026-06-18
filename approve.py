@@ -3,8 +3,8 @@
 Mappings proposed by :mod:`agent.mapper` never auto-accept. Each lands in the
 queue as ``pending`` and is written to two artifacts:
 
-    - ``review_queue.json`` — machine-readable queue state.
-    - ``REVIEW.md`` — human-readable summary for the reviewer.
+    - ``review_queue.json``: machine-readable queue state.
+    - ``REVIEW.md``: human-readable summary for the reviewer.
 
 A mapping only becomes ``approved`` when a human explicitly approves it via
 :func:`approve` (or the ``approve`` CLI subcommand). This module is the
@@ -23,8 +23,12 @@ from agent.mapper import Mapping
 
 QUEUE_PATH = "review_queue.json"
 REVIEW_MD_PATH = "REVIEW.md"
+INVENTORY_PATH = "evidence_inventory.json"
 
 QUEUE_VERSION = "v1"
+
+# Max length of the raw-evidence summary shown per evidence id in REVIEW.md.
+_SUMMARY_MAX_LEN = 160
 
 
 def _now_iso() -> str:
@@ -116,8 +120,69 @@ def _write_queue_file(entries: list[dict[str, Any]]) -> None:
         handle.write(_render_review_md(queue_obj))
 
 
+def _load_inventory() -> dict[str, dict[str, Any]]:
+    """Load the evidence inventory as an id-keyed lookup, if it exists.
+
+    ``evidence_inventory.json`` is written by the pipeline orchestrator
+    (``run.py``) and maps each evidence id back to its source, type, raw
+    payload, and collection time. It lets ``REVIEW.md`` resolve the opaque
+    evidence ids in each proposal to something a human can audit. The file is
+    optional: if it is absent or unreadable, rendering degrades to bare ids.
+
+    Returns:
+        A dict keyed by evidence id whose values are the full evidence records,
+        or an empty dict when the inventory is unavailable.
+    """
+    try:
+        with open(INVENTORY_PATH, encoding="utf-8") as handle:
+            records = json.load(handle)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+    if not isinstance(records, list):
+        return {}
+    return {
+        record["id"]: record
+        for record in records
+        if isinstance(record, dict) and isinstance(record.get("id"), str)
+    }
+
+
+def _summarize_evidence(evidence_id: str, inventory: dict[str, dict[str, Any]]) -> str:
+    """Render one evidence id with its resolved source, type, time, and summary.
+
+    Args:
+        evidence_id: The evidence id cited by a proposal.
+        inventory: The id-keyed lookup from :func:`_load_inventory`.
+
+    Returns:
+        A single Markdown line. When the id resolves against the inventory it
+        reads ``id`: source / type · collected_at · <raw note>``; when it does
+        not (no inventory, or an unknown id) it falls back to the bare id so the
+        reviewer still sees exactly what the proposal cited.
+    """
+    record = inventory.get(evidence_id)
+    if record is None:
+        return f"`{evidence_id}`"
+
+    raw = record.get("raw")
+    note = raw.get("note") if isinstance(raw, dict) else None
+    summary = " ".join(str(note).split()) if note else "(no summary in raw payload)"
+    if len(summary) > _SUMMARY_MAX_LEN:
+        summary = summary[: _SUMMARY_MAX_LEN - 1].rstrip() + "…"
+
+    return (
+        f"`{evidence_id}`: {record.get('source')} / {record.get('type')} "
+        f"· collected {record.get('collected_at')} · {summary}"
+    )
+
+
 def _render_review_md(queue_obj: dict[str, Any]) -> str:
     """Render the human-readable ``REVIEW.md`` from a queue object.
+
+    Each cited evidence id is resolved against ``evidence_inventory.json`` (when
+    present) to its source, type, a short raw summary, and collection time, so a
+    reviewer does not have to chase opaque ids. Rendering is display-only: it
+    does not alter queue entries, approval state, or proposal identity.
 
     Args:
         queue_obj: The full queue object (``version``, ``generated_at``,
@@ -129,6 +194,7 @@ def _render_review_md(queue_obj: dict[str, Any]) -> str:
     entries = queue_obj.get("entries", [])
     pending = sum(1 for e in entries if e.get("status") == "pending")
     approved = sum(1 for e in entries if e.get("status") == "approved")
+    inventory = _load_inventory()
 
     lines = [
         "# Evidence-to-Control Review Queue",
@@ -142,11 +208,15 @@ def _render_review_md(queue_obj: dict[str, Any]) -> str:
 
     for entry in entries:
         evidence_ids = entry.get("evidence_ids") or []
-        evidence_str = ", ".join(f"`{eid}`" for eid in evidence_ids) or "_none (no mapping proposed)_"
-        lines.append(f"## {entry.get('control_id')} — {entry.get('status')}")
+        lines.append(f"## {entry.get('control_id')}: {entry.get('status')}")
         lines.append("")
         lines.append(f"- **Confidence:** {entry.get('confidence')}")
-        lines.append(f"- **Evidence:** {evidence_str}")
+        if evidence_ids:
+            lines.append("- **Evidence:**")
+            for eid in evidence_ids:
+                lines.append(f"  - {_summarize_evidence(eid, inventory)}")
+        else:
+            lines.append("- **Evidence:** _none (no mapping proposed)_")
         lines.append(f"- **Rationale:** {entry.get('rationale')}")
         if entry.get("status") == "approved":
             lines.append(
@@ -166,7 +236,7 @@ def enqueue_pending(mappings: list[Mapping]) -> None:
     control was already ``approved`` *and* the re-proposed mapping is identical
     (same evidence ids, confidence, and rationale): in that case the existing
     approval (status, reviewer, decision time) is carried over. Any change to a
-    proposal resets that control to ``pending`` — a human approval never
+    proposal resets that control to ``pending``, a human approval never
     silently covers a different mapping.
 
     Args:
@@ -239,7 +309,7 @@ def _cmd_list() -> None:
             evidence = ", ".join(entry.get("evidence_ids") or []) or "(no mapping)"
             line = f"  {entry['control_id']:<8} {entry['confidence']:<6} {evidence}"
             if status == "approved":
-                line += f"  — {entry.get('reviewer')} @ {entry.get('decided_at')}"
+                line += f"  ({entry.get('reviewer')} @ {entry.get('decided_at')})"
             print(line)
 
 
