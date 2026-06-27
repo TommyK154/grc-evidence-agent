@@ -62,7 +62,7 @@ class Mapping:
 
         rationale: Short natural-language justification for the mapping.
 
-    The MAPPING_SYSTEM_V1 template in :mod:`agent.prompts` operationalizes these
+    The MAPPING_SYSTEM_V2 template in :mod:`agent.prompts` operationalizes these
     criteria for the model.
     """
 
@@ -173,7 +173,7 @@ def _call_model(
     return client.messages.create(
         model=MODEL,
         max_tokens=MAX_TOKENS,
-        system=prompts.MAPPING_SYSTEM_V1,
+        system=prompts.MAPPING_SYSTEM_V2,
         messages=messages,
         output_config={
             "effort": EFFORT,
